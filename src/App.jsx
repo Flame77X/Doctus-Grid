@@ -312,33 +312,32 @@ export default function AIChatbotStation() {
   };
 
   const callGeminiAPI = async (userText) => {
-    const lower = userText.toLowerCase();
-    if (lower === 'hi' || lower === 'hello') return "Hey there! What do you want to learn today?";
-
     setIsTyping(true);
+    let systemPrompt = `${bot.systemPrompt} Student: ${user.name}, Subject: ${user.subject}. Keep answers short and clear.`;
 
-    // Context Injection Logic
-    let systemInstruction = `${bot.systemPrompt} Student: ${user.name}, Subject: ${user.subject}`;
-    if (lastGeneratedImage && (lower.includes('describe') || lower.includes('explain') || lower.includes('what is this') || lower.includes('look at'))) {
-      systemInstruction += ` [SYSTEM NOTE: The user is currently looking at a generated diagram of "${lastGeneratedImage}". Describe it scientifically as if you can see it.]`;
+    if (lastGeneratedImage && /describe|explain|this|image/i.test(userText)) {
+      systemPrompt += ` The student just saw a diagram of "${lastGeneratedImage}". Explain it.`;
     }
 
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: userText }] }],
-          systemInstruction: { parts: [{ text: systemInstruction }] }
+          contents: [{ role: "user", parts: [{ text: userText }] }],
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
         })
       });
-      if (!res.ok) throw new Error();
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setIsOffline(false);
       return data.candidates[0].content.parts[0].text;
     } catch (err) {
+      console.error(err);
       setIsOffline(true);
-      return "Offline mode active. I can still show diagrams and jokes!";
+      return "I'm offline right now, but I can still generate diagrams! Try: generate human heart";
     } finally {
       setIsTyping(false);
     }
@@ -450,7 +449,7 @@ export default function AIChatbotStation() {
               <div className="flex items-center gap-3">
                 <button onClick={() => setMobileMenuOpen(true)} className="md:hidden p-2 -ml-2 hover:bg-white/5 rounded-lg"><Icons.Menu className="w-6 h-6" /></button>
                 <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-red-500' : 'bg-green-500'} animate-pulse shadow-[0_0_10px_#22c55e]`}></div>
-                <span className="text-sm font-bold text-slate-200 tracking-wide">{isOffline ? 'OFFLINE MODE' : 'SYSTEM ONLINE'}</span>
+                <span className="text-sm font-bold text-slate-200 tracking-wide">{isOffline ? 'OFFLINE MODE' : 'SYSTEM ONLINE (v1.7)'}</span>
               </div>
               <div className="flex items-center gap-4">
                 <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-full">
