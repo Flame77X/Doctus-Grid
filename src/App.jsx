@@ -88,6 +88,8 @@ const smartImageGenerator = (userText) => {
   const isBiology = /cell|organ|tissue|body|anatomy|muscle|bone|skeleton|plant|animal|life|bio/i.test(lower);
   const isPhysics = /force|energy|light|ray|lens|mirror|circuit|magnet|wave|motion|speed|gravity|physic/i.test(lower);
   const isChemistry = /atom|molecule|reaction|bond|element|compound|acid|base|chemical/i.test(lower);
+  const isMath = /graph|function|geometry|shape|angle|triangle|circle|equation|formula|math|algebra|calculus/i.test(lower);
+  const isCS = /code|computer|algorithm|network|server|database|interface|screen|app|software|binary|logic/i.test(lower);
 
   if (isBiology) {
     return `${userText}, accurate biological structure diagram, cross-section if applicable, clear labels, textbook style, educational, white background`;
@@ -97,6 +99,12 @@ const smartImageGenerator = (userText) => {
   }
   if (isChemistry) {
     return `${userText}, accurate chemical structure or reaction diagram, molecular model, clear bonds and atoms, educational, white background`;
+  }
+  if (isMath) {
+    return `${userText}, clean mathematical diagram, geometric figures, graphs with axes labeled, educational, white background, vector style`;
+  }
+  if (isCS) {
+    return `${userText}, computer science diagram, network topology, flow chart, system architecture, clean technical illustration, white background`;
   }
 
   // 3. Generic Fallback
@@ -468,7 +476,7 @@ export default function AIChatbotStation() {
               <div className="flex items-center gap-3">
                 <button onClick={() => setMobileMenuOpen(true)} className="md:hidden p-2 -ml-2 hover:bg-white/5 rounded-lg"><Icons.Menu className="w-6 h-6" /></button>
                 <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-red-500' : 'bg-green-500'} animate-pulse shadow-[0_0_10px_#22c55e]`}></div>
-                <span className="text-sm font-bold text-slate-200 tracking-wide">{isOffline ? 'OFFLINE MODE (v2.6)' : 'SYSTEM ONLINE (v2.6)'}</span>
+                <span className="text-sm font-bold text-slate-200 tracking-wide">{isOffline ? 'OFFLINE MODE (v2.7)' : 'SYSTEM ONLINE (v2.7)'}</span>
               </div>
               <div className="flex items-center gap-4">
                 <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-full">
