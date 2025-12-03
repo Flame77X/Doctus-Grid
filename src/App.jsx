@@ -475,7 +475,7 @@ export default function AIChatbotStation() {
               <div className="flex items-center gap-3">
                 <button onClick={() => setMobileMenuOpen(true)} className="md:hidden p-2 -ml-2 hover:bg-white/5 rounded-lg"><Icons.Menu className="w-6 h-6" /></button>
                 <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-red-500' : 'bg-green-500'} animate-pulse shadow-[0_0_10px_#22c55e]`}></div>
-                <span className="text-sm font-bold text-slate-200 tracking-wide">{isOffline ? 'OFFLINE MODE (v2.9.3)' : 'SYSTEM ONLINE (v2.9.3 - Gemini 2.5)'}</span>
+                <span className="text-sm font-bold text-slate-200 tracking-wide">{isOffline ? 'OFFLINE MODE (v2.9.4)' : 'SYSTEM ONLINE (v2.9.4 - Gemini 2.5)'}</span>
               </div>
               <div className="flex items-center gap-4">
                 <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-full">
