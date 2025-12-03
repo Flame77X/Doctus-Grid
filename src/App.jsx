@@ -269,11 +269,8 @@ export default function AIChatbotStation() {
   const [lastGeneratedImage, setLastGeneratedImage] = useState(null);
   const scrollRef = useRef(null);
 
-  // EMERGENCY FIX: Obfuscating key to bypass GitHub/Google auto-revocation
-  // (The scanner kills the key if it sees the full string in the repo)
-  const p1 = "AIzaSyBhDJtIKxA";
-  const p2 = "-wjYQP7twaRjj_m5Cwgk6L8Y";
-  const apiKey = p1 + p2;
+  // Securely get API key from environment variables
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
   const bot = AI_PERSONAS.find(p => p.id === activeBotId) || AI_PERSONAS[0];
 
@@ -332,7 +329,7 @@ export default function AIChatbotStation() {
     }
 
     try {
-      // Switching to gemini-2.0-flash (Stable)
+      // Switching to gemini-2.5-flash (Stable)
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -478,7 +475,7 @@ export default function AIChatbotStation() {
               <div className="flex items-center gap-3">
                 <button onClick={() => setMobileMenuOpen(true)} className="md:hidden p-2 -ml-2 hover:bg-white/5 rounded-lg"><Icons.Menu className="w-6 h-6" /></button>
                 <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-red-500' : 'bg-green-500'} animate-pulse shadow-[0_0_10px_#22c55e]`}></div>
-                <span className="text-sm font-bold text-slate-200 tracking-wide">{isOffline ? 'OFFLINE MODE (v2.9)' : 'SYSTEM ONLINE (v2.9)'}</span>
+                <span className="text-sm font-bold text-slate-200 tracking-wide">{isOffline ? 'OFFLINE MODE (v2.9.1)' : 'SYSTEM ONLINE (v2.9.1 - Gemini 2.5)'}</span>
               </div>
               <div className="flex items-center gap-4">
                 <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-full">
