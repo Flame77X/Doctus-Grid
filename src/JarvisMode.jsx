@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 const JarvisMode = ({ onClose, onSend, isSpeaking, lastBotMessage }) => {
     const [status, setStatus] = useState('Initializing...');
     const [isListening, setIsListening] = useState(false);
+    const [userTranscript, setUserTranscript] = useState(''); // New: Show what user is saying
     const canvasRef = useRef(null);
     const audioContextRef = useRef(null);
     const analyserRef = useRef(null);
@@ -93,36 +94,61 @@ const JarvisMode = ({ onClose, onSend, isSpeaking, lastBotMessage }) => {
 
     // Speech Recognition Logic
     const startListening = () => {
-        if (!('webkitSpeechRecognition' in window)) return;
+        if (!('webkitSpeechRecognition' in window)) {
+            setStatus('Voice Not Supported in this Browser');
+            return;
+        }
+
+        // Stop existing instance if any
+        if (recognitionRef.current) recognitionRef.current.stop();
 
         const recognition = new window.webkitSpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
         recognition.lang = 'en-US';
 
-        recognition.onstart = () => setIsListening(true);
+        recognition.onstart = () => {
+            setIsListening(true);
+            setStatus('Online. Listening...');
+        };
+
         recognition.onend = () => {
             setIsListening(false);
-            // Auto restart if not closed
-            if (audioContextRef.current?.state === 'running') recognition.start();
+            setStatus('Standby. Click mic to resume.');
         };
 
         recognition.onresult = (event) => {
-            if (isSpeaking) return; // Don't listen while bot is talking
+            if (isSpeaking) return;
 
             const transcript = Array.from(event.results)
                 .map(result => result[0])
                 .map(result => result.transcript)
                 .join('');
 
-            if (event.results[0].isFinal) {
-                setStatus('Processing...');
-                onSend(null, transcript); // Send to main chat handler
+            setUserTranscript(transcript); // Update UI with live speech
+
+            // Only send if final and not empty
+            const lastResult = event.results[event.results.length - 1];
+            if (lastResult.isFinal) {
+                const finalTranscript = lastResult[0].transcript.trim();
+                if (finalTranscript) {
+                    setStatus('Processing...');
+                    onSend(null, finalTranscript);
+                    setUserTranscript(''); // Clear after sending
+                }
             }
         };
 
         recognitionRef.current = recognition;
         recognition.start();
+    };
+
+    const toggleListening = () => {
+        if (isListening) {
+            recognitionRef.current?.stop();
+        } else {
+            startListening();
+        }
     };
 
     return (
@@ -149,11 +175,27 @@ const JarvisMode = ({ onClose, onSend, isSpeaking, lastBotMessage }) => {
             />
 
             {/* Subtitles / Last Message */}
-            <div className="absolute bottom-32 max-w-2xl text-center px-4">
-                <p className="text-white/80 text-lg md:text-xl font-light leading-relaxed animate-pulse">
+            <div className="absolute bottom-32 max-w-2xl text-center px-4 space-y-4">
+                {/* User Transcript (New) */}
+                {userTranscript && (
+                    <p className="text-cyan-300/80 text-xl font-medium animate-pulse">
+                        "{userTranscript}"
+                    </p>
+                )}
+
+                {/* Bot Message */}
+                <p className="text-white/80 text-lg md:text-xl font-light leading-relaxed">
                     {lastBotMessage || "Awaiting input..."}
                 </p>
             </div>
+
+            {/* Manual Mic Trigger (New) */}
+            <button
+                onClick={toggleListening}
+                className={`absolute bottom-24 p-4 rounded-full border transition-all ${isListening ? 'bg-cyan-500/20 border-cyan-400 text-cyan-400 animate-pulse' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" x2="12" y1="19" y2="22" /></svg>
+            </button>
 
             {/* Close Button */}
             <button
