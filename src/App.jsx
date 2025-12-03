@@ -270,7 +270,7 @@ export default function AIChatbotStation() {
   const scrollRef = useRef(null);
 
   // Securely get API key from environment variables
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
 
   const bot = AI_PERSONAS.find(p => p.id === activeBotId) || AI_PERSONAS[0];
 
@@ -329,41 +329,30 @@ export default function AIChatbotStation() {
     }
 
     try {
-      // Switching to gemini-2.5-flash (Stable)
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      // Secure Call to Vercel Serverless Function
+      // This hides the API key from the browser
+      const res = await fetch('/api/chat', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: userText }] }],
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
+          message: userText,
+          systemPrompt: systemPrompt
         })
       });
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `HTTP ${res.status}`);
+      }
+
       const data = await res.json();
       setIsOffline(false);
-      return data.candidates[0].content.parts[0].text;
+      return data.reply;
+
     } catch (err) {
       console.error(err);
       setIsOffline(true);
-
-      try {
-        // DIAGNOSTIC: Check if API key is valid and list models
-        const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-        const listData = await listRes.json();
-
-        if (!listRes.ok) {
-          return `API Key Error: ${listData.error?.message || listRes.status}`;
-        }
-
-        const models = listData.models?.map(m => m.name.replace('models/', '')).filter(n => n.includes('gemini'));
-        const suggested = models?.find(n => n.includes('1.5-flash')) || models?.[0] || "None";
-
-        return `Error 404. Your Key works! Available: ${suggested}. (Update code to use this)`;
-      } catch (e) {
-        return `Connection Error: Check internet or API Key. (${err.message})`;
-      }
+      return `Connection Error: ${err.message}. (Ensure you have deployed to Vercel and set GEMINI_API_KEY)`;
     } finally {
       setIsTyping(false);
     }
