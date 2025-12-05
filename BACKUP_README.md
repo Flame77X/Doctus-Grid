@@ -1,20 +1,92 @@
-# Nexus AI Chatbot - Full Project Backup (v2.9)
+# Nexus AI Chatbot - Full Project Backup (v2.9.6 - Vercel Serverless Edition)
 
-This file contains the complete source code for the Nexus AI Chatbot as of v2.9.
-If you ever lose the files, you can recreate the project by copying these files.
+This file contains the complete source code for the Nexus AI Chatbot as of v2.9.6.
+This version uses a **Vercel Serverless Function** to securely hide the API key.
 
-## 1. Environment Variables (`.env`)
-**IMPORTANT:** This file contains your API Key. Keep it safe.
-Create a file named `.env` in the root folder and paste this:
+## 1. Environment Variables (Vercel)
+**IMPORTANT:** Your API Key is now stored securely on Vercel, NOT in the code.
 
-```env
-VITE_GEMINI_API_KEY=AIzaSyBhDJtIKxA-wjYQP7twaRjj_m5Cwgk6L8Y
+1.  Go to Vercel Project Settings > Environment Variables.
+2.  Add:
+    *   **Key:** `GROQ_API_KEY`
+    *   **Value:** `(Paste your actual Groq API Key here)`
+
+---
+
+## 2. Serverless Backend (`api/chat.js`)
+**[NEW]** This file runs on the server and talks to Google. It hides your key.
+
+```javascript
+export default async function handler(req, res) {
+    // CORS headers for security and access control
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader(
+        'Access-Control-Allow-Headers',
+        'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    );
+
+    // Handle preflight request
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
+
+    // Only allow POST requests
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const { message, systemPrompt } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+        console.error('Server Error: Missing GEMINI_API_KEY environment variable');
+        return res.status(500).json({ error: 'Server configuration error: Missing API Key' });
+    }
+
+    try {
+        // Call Google Gemini API (Server-Side)
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ role: 'user', parts: [{ text: message }] }],
+                    systemInstruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
+                    generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
+                })
+            }
+        );
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Gemini API Error:', errorData);
+            throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!reply) {
+            throw new Error('Invalid response format from Gemini API');
+        }
+
+        res.status(200).json({ reply });
+
+    } catch (error) {
+        console.error('Handler Error:', error);
+        res.status(500).json({ error: error.message || 'Internal Server Error' });
+    }
+}
 ```
 
 ---
 
-## 2. Main Application Logic (`src/App.jsx`)
-This is the heart of the bot. It handles the chat, API calls, and UI.
+## 3. Main Application Logic (`src/App.jsx`)
+Updated to call `/api/chat` instead of Google directly.
 
 ```jsx
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
@@ -288,11 +360,6 @@ export default function AIChatbotStation() {
   const [lastGeneratedImage, setLastGeneratedImage] = useState(null);
   const scrollRef = useRef(null);
 
-  // EMERGENCY FIX: Obfuscating key to bypass GitHub/Google auto-revocation
-  // (The scanner kills the key if it sees the full string in the repo)
-  const p1 = "AIzaSyBhDJtIKxA";
-  const p2 = "-wjYQP7twaRjj_m5Cwgk6L8Y";
-  const apiKey = p1 + p2;
 
   const bot = AI_PERSONAS.find(p => p.id === activeBotId) || AI_PERSONAS[0];
 
@@ -351,41 +418,30 @@ export default function AIChatbotStation() {
     }
 
     try {
-      // Switching to gemini-2.0-flash (Stable)
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+      // Secure Call to Vercel Serverless Function
+      // This hides the API key from the browser
+      const res = await fetch('/api/chat', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: userText }] }],
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
+          message: userText,
+          systemPrompt: systemPrompt
         })
       });
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `HTTP ${res.status}`);
+      }
+
       const data = await res.json();
       setIsOffline(false);
-      return data.candidates[0].content.parts[0].text;
+      return data.reply;
+
     } catch (err) {
       console.error(err);
       setIsOffline(true);
-
-      try {
-        // DIAGNOSTIC: Check if API key is valid and list models
-        const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-        const listData = await listRes.json();
-
-        if (!listRes.ok) {
-          return `API Key Error: ${listData.error?.message || listRes.status}`;
-        }
-
-        const models = listData.models?.map(m => m.name.replace('models/', '')).filter(n => n.includes('gemini'));
-        const suggested = models?.find(n => n.includes('1.5-flash')) || models?.[0] || "None";
-
-        return `Error 404. Your Key works! Available: ${suggested}. (Update code to use this)`;
-      } catch (e) {
-        return `Connection Error: Check internet or API Key. (${err.message})`;
-      }
+      return `Connection Error: ${err.message}. (Ensure you have deployed to Vercel and set GEMINI_API_KEY)`;
     } finally {
       setIsTyping(false);
     }
@@ -497,7 +553,7 @@ export default function AIChatbotStation() {
               <div className="flex items-center gap-3">
                 <button onClick={() => setMobileMenuOpen(true)} className="md:hidden p-2 -ml-2 hover:bg-white/5 rounded-lg"><Icons.Menu className="w-6 h-6" /></button>
                 <div className={`w-2 h-2 rounded-full ${isOffline ? 'bg-red-500' : 'bg-green-500'} animate-pulse shadow-[0_0_10px_#22c55e]`}></div>
-                <span className="text-sm font-bold text-slate-200 tracking-wide">{isOffline ? 'OFFLINE MODE (v2.9)' : 'SYSTEM ONLINE (v2.9)'}</span>
+                <span className="text-sm font-bold text-slate-200 tracking-wide">{isOffline ? 'OFFLINE MODE (v2.9.6)' : 'SYSTEM ONLINE (v2.9.6 - Gemini 2.5)'}</span>
               </div>
               <div className="flex items-center gap-4">
                 <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-full">
@@ -571,8 +627,36 @@ export default function AIChatbotStation() {
 
 ---
 
-## 3. Configuration (`package.json`)
-Dependencies and scripts.
+## 4. Vercel Configuration (`vercel.json`)
+**[NEW]** Tells Vercel how to route API requests.
+
+```json
+{
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" }
+  ]
+}
+```
+
+---
+
+## 5. Vite Config (`vite.config.js`)
+Updated for Vercel (removed `base` path).
+
+```js
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react()],
+})
+```
+
+---
+
+## 6. Configuration (`package.json`)
+Dependencies and scripts (unchanged).
 
 ```json
 {
@@ -614,24 +698,8 @@ Dependencies and scripts.
 
 ---
 
-## 4. Vite Config (`vite.config.js`)
-Build configuration.
-
-```js
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  base: '/nexus-ai-bot/',
-})
-```
-
----
-
-## 5. HTML Entry (`index.html`)
-The main HTML file.
+## 7. HTML Entry (`index.html`)
+The main HTML file (unchanged).
 
 ```html
 <!DOCTYPE html>
