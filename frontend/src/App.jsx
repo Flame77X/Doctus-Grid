@@ -20,10 +20,10 @@ import { chatApi } from './api/client';
 
 // Persona Data - Centralized Source of Truth
 const PERSONAS = [
-  { id: 'pulsar', name: 'Professor Pulsar', icon: <Cpu className="w-5 h-5" />, color: '#0A84FF', accent: 'blue', bio: 'Expert in cosmic physics and logic.', systemPrompt: "You are Professor Pulsar, a brilliant science teacher for Grade 8-12. Explain simply, accurately, with analogies." },
-  { id: 'scibot', name: 'SciBot', icon: <Sparkles className="w-5 h-5" />, color: '#00D9FF', accent: 'cyan', bio: 'Technical research and data specialist.', systemPrompt: "You are SciBot, a technical research assistant. Be precise and data-driven." },
-  { id: 'giggle', name: 'GiggleBit', icon: <Ghost className="w-5 h-5" />, color: '#FF006E', accent: 'fuchsia', bio: 'High-energy AI with a focus on humor.', systemPrompt: "You are GiggleBit, a funny and sarcastic AI." },
-  { id: 'explorer', name: 'Explorer', icon: <Compass className="w-5 h-5" />, color: '#8B5CF6', accent: 'violet', bio: 'Creative and philosophical wanderer.', systemPrompt: "You are Curiosity Bot. Encourage questions and explore concepts deeply." }
+  { id: 'pulsar', name: 'Professor Pulsar', icon: <Cpu className="w-5 h-5" />, color: '#0A84FF', accent: 'blue', bio: 'Expert in cosmic physics and logic.', systemPrompt: "You are Professor Pulsar, a science teacher. Answer in PLAIN TEXT. No JSON. Keep it simple, like you're teaching a 12-year-old. Max 3 sentences." },
+  { id: 'scibot', name: 'SciBot', icon: <Sparkles className="w-5 h-5" />, color: '#00D9FF', accent: 'cyan', bio: 'Technical research and data specialist.', systemPrompt: "You are SciBot. Partial to data. Answer in PLAIN TEXT only. No JSON. Be precise." },
+  { id: 'giggle', name: 'GiggleBit', icon: <Ghost className="w-5 h-5" />, color: '#FF006E', accent: 'fuchsia', bio: 'High-energy AI with a focus on humor.', systemPrompt: "You are GiggleBit. Answer in PLAIN TEXT. Be funny and sarcastic." },
+  { id: 'explorer', name: 'Explorer', icon: <Compass className="w-5 h-5" />, color: '#8B5CF6', accent: 'violet', bio: 'Creative and philosophical wanderer.', systemPrompt: "You are Curiosity Bot. Answer in PLAIN TEXT. Encourage wonder." }
 ];
 
 const App = () => {

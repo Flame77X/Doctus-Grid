@@ -15,6 +15,19 @@ export const chatApi = {
         }
 
         const data = await response.json();
-        return data.reply; // Backend returns { reply: "..." }
+
+        // Safety Clean-up: If AI returns a JSON string inside the reply (common with some models)
+        let cleanReply = data.reply;
+        if (typeof cleanReply === 'string' && cleanReply.trim().startsWith('{')) {
+            try {
+                const parsed = JSON.parse(cleanReply);
+                // Extract content/message if it exists, otherwise use original
+                if (parsed.content) cleanReply = parsed.content;
+                else if (parsed.message) cleanReply = parsed.message;
+            } catch (e) {
+                console.warn("Failed to parse AI JSON response, using raw text.");
+            }
+        }
+        return cleanReply;
     }
 };
