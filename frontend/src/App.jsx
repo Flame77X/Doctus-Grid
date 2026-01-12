@@ -67,8 +67,29 @@ const App = () => {
     setInputValue('');
     setIsTyping(true);
 
-    // Auto-close sidebar on mobile after choosing persona or sending message if needed
     if (!isDesktop) setSidebarOpen(false);
+
+    // --- Image Generation Logic ---
+    const lowerTxt = txt.toLowerCase();
+    if (lowerTxt.startsWith('draw') || lowerTxt.startsWith('generate')) {
+      const prompt = txt; // Use the full text as prompt
+      const encodedPrompt = encodeURIComponent(prompt);
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}`;
+
+      // Simulate "thinking" delay then show image
+      setTimeout(() => {
+        setMessages(prev => [...prev, {
+          role: 'ai',
+          text: `Here is your image for: "${prompt}"`,
+          imageUrl: imageUrl, // Special field for images
+          type: 'image',
+          persona: activePersona.id
+        }]);
+        setIsTyping(false);
+      }, 1000);
+      return;
+    }
+    // ------------------------------
 
     try {
       const reply = await chatApi.sendMessage(txt, activePersona.systemPrompt);
@@ -217,7 +238,19 @@ const App = () => {
                     <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: activePersona.color }}></div>
                   )}
                   <p className="text-sm md:text-base leading-relaxed text-white/90 drop-shadow-sm font-light">
-                    {msg.text}
+                    {msg.type === 'image' ? (
+                      <div className="space-y-2">
+                        <span className="block italic opacity-70 mb-2">{msg.text}</span>
+                        <img
+                          src={msg.imageUrl}
+                          alt="Generated AI Art"
+                          className="rounded-xl w-full h-auto shadow-2xl border border-white/10 hover:scale-[1.02] transition-transform duration-300"
+                          loading="lazy"
+                        />
+                      </div>
+                    ) : (
+                      msg.text
+                    )}
                   </p>
                   <div className="mt-3 flex items-center gap-2 text-[9px] md:text-[10px] text-white/30 font-bold uppercase tracking-[0.2em]">
                     {msg.role === 'user' ? (
