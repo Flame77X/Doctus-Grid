@@ -28,16 +28,31 @@ const PERSONAS = [
 
 const App = () => {
   const [activePersona, setActivePersona] = useState(PERSONAS[0]);
-  const [isSidebarOpen, setSidebarOpen] = useState(false); // Default closed for mobile
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > 1024);
-  const [messages, setMessages] = useState([
-    { role: 'ai', text: "Systems online. I am Professor Pulsar. My logic cores are ready for your inquiry.", persona: 'pulsar' }
-  ]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+
+  // -- Settings State --
+  const [showSettings, setShowSettings] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const [largeText, setLargeText] = useState(false);
+
+  // -- Chat History & Persistence --
+  const [messages, setMessages] = useState(() => {
+    const saved = localStorage.getItem('chat_history');
+    return saved ? JSON.parse(saved) : [
+      { role: 'ai', text: "Systems online. I am Professor Pulsar. My logic cores are ready for your inquiry.", persona: 'pulsar' }
+    ];
+  });
+
   const chatEndRef = useRef(null);
 
-  // Handle Responsive Layout
+  useEffect(() => {
+    localStorage.setItem('chat_history', JSON.stringify(messages));
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isTyping]);
+
   useEffect(() => {
     const handleResize = () => {
       const desktop = window.innerWidth > 1024;
@@ -48,15 +63,20 @@ const App = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Auto-scroll to bottom
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
-
-  // Update dynamic CSS variable for the theme
   useEffect(() => {
     document.documentElement.style.setProperty('--current-accent', activePersona.color);
   }, [activePersona]);
+
+  // -- Actions --
+  const handleNewChat = () => {
+    const freshStart = [{
+      role: 'ai',
+      text: `System Reset. I am ${activePersona.name}. Ready for a new session.`,
+      persona: activePersona.id
+    }];
+    setMessages(freshStart);
+    setSidebarOpen(false);
+  };
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
@@ -69,19 +89,18 @@ const App = () => {
 
     if (!isDesktop) setSidebarOpen(false);
 
-    // --- Image Generation Logic ---
+    // Image logic
     const lowerTxt = txt.toLowerCase();
     if (lowerTxt.startsWith('draw') || lowerTxt.startsWith('generate')) {
-      const prompt = txt; // Use the full text as prompt
+      const prompt = txt;
       const encodedPrompt = encodeURIComponent(prompt);
       const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}`;
 
-      // Simulate "thinking" delay then show image
       setTimeout(() => {
         setMessages(prev => [...prev, {
           role: 'ai',
           text: `Here is your image for: "${prompt}"`,
-          imageUrl: imageUrl, // Special field for images
+          imageUrl: imageUrl,
           type: 'image',
           persona: activePersona.id
         }]);
@@ -89,7 +108,6 @@ const App = () => {
       }, 1000);
       return;
     }
-    // ------------------------------
 
     try {
       const reply = await chatApi.sendMessage(txt, activePersona.systemPrompt);
@@ -110,6 +128,40 @@ const App = () => {
     }
   };
 
+  // -- Components --
+  const SettingsModal = () => (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowSettings(false)}>
+      <div className="glass-panel w-full max-w-sm p-6 space-y-6 m-4" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-bold">Settings</h3>
+          <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-white/10 rounded-full"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+            <div className="flex items-center gap-3">
+              <Sparkles className="w-5 h-5 text-blue-400" />
+              <span className="font-medium">Reduced Motion</span>
+            </div>
+            <input type="checkbox" checked={reduceMotion} onChange={e => setReduceMotion(e.target.checked)} className="w-5 h-5 accent-blue-500 rounded bg-white/10 border-white/20" />
+          </div>
+
+          <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+            <div className="flex items-center gap-3">
+              <span className="text-lg font-bold">Aa</span>
+              <span className="font-medium">Large Text</span>
+            </div>
+            <input type="checkbox" checked={largeText} onChange={e => setLargeText(e.target.checked)} className="w-5 h-5 accent-emerald-500 rounded bg-white/10 border-white/20" />
+          </div>
+        </div>
+
+        <button onClick={() => setShowSettings(false)} className="w-full py-3 bg-white text-black font-bold rounded-xl hover:scale-[1.02] transition-transform">
+          Save Changes
+        </button>
+      </div>
+    </div>
+  );
+
   const SidebarContent = () => (
     <>
       <div className="p-6 flex items-center justify-between">
@@ -127,7 +179,7 @@ const App = () => {
       </div>
 
       <div className="flex-1 px-3 space-y-2 overflow-y-auto custom-scrollbar">
-        <button className="w-full flex items-center gap-3 p-4 rounded-2xl bg-white/10 hover:bg-white/15 transition-all text-sm font-medium border border-white/5 active:scale-95">
+        <button onClick={handleNewChat} className="w-full flex items-center gap-3 p-4 rounded-2xl bg-white/10 hover:bg-white/15 transition-all text-sm font-medium border border-white/5 active:scale-95">
           <PlusCircle className="w-5 h-5" />
           <span>New Chat</span>
         </button>
@@ -160,10 +212,6 @@ const App = () => {
       </div>
 
       <div className="p-4 space-y-2">
-        <button className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-all text-white/60">
-          <History className="w-5 h-5" />
-          <span className="text-sm">Session History</span>
-        </button>
         <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/5">
           <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center border border-white/10 overflow-hidden">
             <User className="w-4 h-4 text-white/50" />
@@ -178,9 +226,11 @@ const App = () => {
   );
 
   return (
-    <div className="relative h-[100dvh] w-full bg-black text-white font-sans overflow-hidden select-none">
-      {/* 5.1 Dynamic Aurora Engine */}
-      <div className="aurora-background fixed inset-0 z-0 pointer-events-none"></div>
+    <div className={`relative h-[100dvh] w-full bg-black text-white font-sans overflow-hidden select-none ${largeText ? 'text-lg' : ''}`}>
+      {/* Dynamic Aurora Engine */}
+      {!reduceMotion && <div className="aurora-background fixed inset-0 z-0 pointer-events-none"></div>}
+
+      {showSettings && <SettingsModal />}
 
       <div className="relative z-10 flex h-full w-full p-2 md:p-4 gap-2 md:gap-4">
 
@@ -224,8 +274,7 @@ const App = () => {
               </div>
             </div>
             <div className="flex gap-1 md:gap-2">
-              <button className="p-2.5 rounded-xl hover:bg-white/5 text-white/40 transition-colors"><Info className="w-5 h-5" /></button>
-              <button className="p-2.5 rounded-xl hover:bg-white/10 text-white/80 transition-colors bg-white/5"><Settings className="w-5 h-5" /></button>
+              <button onClick={() => setShowSettings(true)} className="p-2.5 rounded-xl hover:bg-white/10 text-white/80 transition-colors bg-white/5"><Settings className="w-5 h-5" /></button>
             </div>
           </header>
 
@@ -237,7 +286,7 @@ const App = () => {
                   {msg.role === 'ai' && (
                     <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: activePersona.color }}></div>
                   )}
-                  <p className="text-sm md:text-base leading-relaxed text-white/90 drop-shadow-sm font-light">
+                  <p className={`leading-relaxed text-white/90 drop-shadow-sm font-light ${largeText ? 'text-base md:text-lg' : 'text-sm md:text-base'}`}>
                     {msg.type === 'image' ? (
                       <div className="space-y-2">
                         <span className="block italic opacity-70 mb-2">{msg.text}</span>
@@ -277,7 +326,7 @@ const App = () => {
           {/* Unified ChatInput */}
           <footer className="glass-panel p-2 md:p-4 mb-1 md:mb-0">
             <div className="relative flex items-center gap-1 md:gap-2">
-              <button className="p-3 md:p-4 rounded-xl md:rounded-2xl hover:bg-white/5 text-white/40 transition-colors active:scale-90">
+              <button className="p-3 md:p-4 rounded-xl md:rounded-2xl hover:bg-white/5 text-white/40 transition-colors active:scale-90 opacity-50 cursor-not-allowed" disabled>
                 <Mic className="w-5 h-5 md:w-6 md:h-6" />
               </button>
               <div className="flex-1 relative">
