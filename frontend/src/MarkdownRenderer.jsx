@@ -14,15 +14,24 @@ const MarkdownRenderer = ({ content }) => {
                     code({ node, inline, className, children, ...props }) {
                         const match = /language-(\w+)/.exec(className || '');
                         return !inline && match ? (
-                            <div className="relative group">
-                                <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <span className="text-xs text-slate-400 bg-slate-800 px-2 py-1 rounded">{match[1]}</span>
+                            <div className="my-5 rounded-xl overflow-hidden bg-[#1e1e1e] shadow-2xl border border-white/10 group ring-1 ring-white/5">
+                                {/* Window Header (Xcode Style) */}
+                                <div className="flex items-center justify-between px-4 py-2.5 bg-[#282828] border-b border-white/5 select-none">
+                                    <div className="flex gap-2">
+                                        <div className="w-3 h-3 rounded-full bg-[#FF5F56] shadow-sm transform hover:scale-110 transition-transform" />
+                                        <div className="w-3 h-3 rounded-full bg-[#FFBD2E] shadow-sm transform hover:scale-110 transition-transform" />
+                                        <div className="w-3 h-3 rounded-full bg-[#27C93F] shadow-sm transform hover:scale-110 transition-transform" />
+                                    </div>
+                                    <div className="text-[11px] font-medium text-gray-500 font-mono opacity-60 group-hover:opacity-100 transition-opacity uppercase tracking-wider">
+                                        {match[1]}
+                                    </div>
                                 </div>
-                                <pre className="bg-slate-900/50 p-4 rounded-lg overflow-x-auto border border-white/10 my-2">
-                                    <code className={className} {...props}>
+                                {/* Code Content */}
+                                <div className="p-4 overflow-x-auto bg-[#1e1e1e]">
+                                    <code className={`${className} !bg-transparent !p-0 font-mono text-[13.5px] leading-relaxed`} {...props}>
                                         {children}
                                     </code>
-                                </pre>
+                                </div>
                             </div>
                         ) : (
                             <code className="bg-slate-800 px-1.5 py-0.5 rounded text-blue-300 text-sm font-mono" {...props}>

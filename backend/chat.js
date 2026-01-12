@@ -20,43 +20,33 @@ export default async function handler(req, res) {
     }
 
     const { message, systemPrompt } = req.body;
-    const apiKey = process.env.GROQ_API_KEY;
-
-    if (!apiKey) {
-        console.error('Server Error: Missing GROQ_API_KEY environment variable');
-        return res.status(500).json({ error: 'Server configuration error: Missing API Key' });
-    }
 
     try {
-        // Call Groq API (Server-Side)
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        // Call Pollinations.ai API
+        // Documentation: https://github.com/pollinations/pollinations/blob/master/APIDOCS.md
+        const response = await fetch('https://text.pollinations.ai/', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${apiKey}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: "llama3-70b-8192",
                 messages: [
                     { role: "system", content: systemPrompt || "You are a helpful assistant." },
                     { role: "user", content: message }
                 ],
-                temperature: 0.7,
-                max_tokens: 1024
+                model: 'openai' // Request OpenAI-compatible formatting if available, though text root usually returns text
             })
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Groq API Error:', errorData);
-            throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+            throw new Error(`Pollinations API Error: ${response.status}`);
         }
 
-        const data = await response.json();
-        const reply = data.choices?.[0]?.message?.content;
+        // Pollinations.ai returns raw text for this endpoint
+        const reply = await response.text();
 
         if (!reply) {
-            throw new Error('Invalid response format from Groq API');
+            throw new Error('Empty response from Pollinations API');
         }
 
         res.status(200).json({ reply });

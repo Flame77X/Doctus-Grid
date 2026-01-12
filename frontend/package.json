@@ -1,5 +1,5 @@
 {
-  "name": "protech",
+  "name": "doctus-ai",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -13,7 +13,9 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "appwrite": "^21.5.0",
     "katex": "^0.16.25",
+    "lucide-react": "^0.562.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",

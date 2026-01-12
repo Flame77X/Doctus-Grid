@@ -1,0 +1,15 @@
+services:
+  # Backend Service (Express)
+  - type: web
+    name: doctus-grid-backend
+    env: node
+    plan: free
+    rootDirectory: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20.0.0
+    autoDeploy: true
+
+# Note: Frontend is managed via Vercel as per usage plan.
