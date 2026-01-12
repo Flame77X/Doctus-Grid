@@ -1,6 +1,7 @@
 {
     "name": "doctus-ai-backend",
     "version": "1.0.0",
+    "type": "module",
     "description": "Backend API for Doctus Grid",
     "main": "server.js",
     "scripts": {
